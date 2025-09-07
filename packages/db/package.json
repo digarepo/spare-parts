@@ -1,0 +1,17 @@
+{
+  "name": "@spare-parts/db",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "studio": "drizzle-kit studio"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.5"
+  }
+}

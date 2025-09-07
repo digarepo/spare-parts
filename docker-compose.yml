@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: spareparts_postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spareparts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spareparts}
+      POSTGRES_DB: ${POSTGRES_DB:-spareparts}
+    volumes:
+      - ./docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spareparts} -d ${POSTGRES_DB:-spareparts}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: spareparts_redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker-data/redis:/data
+
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: spareparts_elastic
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms${ELASTIC_HEAP:-512m} -Xmx${ELASTIC_HEAP:-512m}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "${ELASTIC_PORT:-9200}:9200"
+    volumes:
+      - ./docker-data/elasticsearch:/usr/share/elasticsearch/data

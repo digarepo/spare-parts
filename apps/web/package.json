@@ -1,0 +1,8 @@
+{
+  "name": "@spare-parts/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}

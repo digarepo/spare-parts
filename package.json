@@ -14,7 +14,12 @@
     "typecheck": "tsc -p tsconfig.base.json --noEmit",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "npm -ws run build",
+    "clean": "git clean -fdX -e '",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down -v",
+    "dev:api": "npm -w apps/api run dev"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",
@@ -29,6 +34,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.1.6",
     "prettier": "^3.6.2",
+    "tsx": "^4.20.5",
     "typescript": "5.5.4"
   }
 }

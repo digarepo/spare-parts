@@ -16,6 +16,11 @@
     "resolveJsonModule": true,
     "declaration": false,
     "sourceMap": true,
-    "outDir": "dist"
+    "outDir": "dist",
+
+    /* Required by Nest for decorators */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false
   }
 }
