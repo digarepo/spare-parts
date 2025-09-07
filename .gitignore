@@ -34,3 +34,4 @@ build/
 # Docker
 docker-data/
 *.pid
+tools/backlog_import.csv
