@@ -1,0 +1,59 @@
+Title,Body,Labels,Milestone
+Initialize monorepo with workspaces,"Goal: Create apps/api, apps/web, packages/contracts, infra. Acceptance: workspaces detected; CI build runs.","P1, infra",Sprint 0
+"Docker Compose: Postgres,Redis,Elasticsearch",Goal: Single-node dev stack. Acceptance: docker compose up -d starts services; health reachable.,"P2, infra",Sprint 0
+NestJS skeleton with health endpoint,Goal: /api/v1/health returns { ok: true }. Acceptance: unit test for health.,"P2, infra",Sprint 0
+Wire Drizzle to Postgres and migrations,Goal: Drizzle ORM + drizzle-kit. Acceptance: first migration applied; notes in README.,"P1, infra",Sprint 0
+Remix app bootstrapped,Goal: Index page renders and can call API. Acceptance: shows API health.,"P2, infra",Sprint 0
+CI setup (GitHub Actions) for build,Goal: Build API & Web on push. Acceptance: CI green on main.,"P2, infra",Sprint 0
+IAM schema and user table,"Goal: iam.users with unique email, password hash, role. Acceptance: migration applied.","P1, iam",Sprint 1
+Register + Login endpoints with JWT,"Endpoints: POST /auth/register, POST /auth/login. Acceptance: access+refresh; bcrypt.","P1, iam",Sprint 1
+Refresh token + /me endpoint,"Endpoints: POST /auth/refresh, GET /me. Acceptance: refresh rotates; /me returns profile.","P2, iam",Sprint 1
+RBAC guard (customer/seller/admin),Goal: role-based protection. Acceptance: wrong role rejected.,"P2, iam",Sprint 1
+"Catalog schemas (products,categories,fitment)",Tables with indexes. Acceptance: migration applied; seed present.,"P1, catalog",Sprint 2
+Product CRUD (seller/admin),Endpoints: GET/POST /catalog/products etc. Acceptance: create/list paginated.,"P1, catalog",Sprint 2
+Fitment filter endpoint,Endpoint: GET /catalog/fitment?make&model&year&engine. Acceptance: correct subset.,"P2, catalog",Sprint 2
+Seed script for categories/products/fitment,Goal: populate dev DB. Acceptance: idempotent; documented.,"P2, catalog",Sprint 2
+Remix: product list + detail pages,Goal: SSR list + detail. Acceptance: loader uses API; paginated.,"P2, catalog",Sprint 2
+Inventory schema and endpoints,"Table: inventory(product_id, seller_id, qty). Endpoints: GET stock, SET stock.","P2, inventory",Sprint 3
+Reservation interface for checkout,Goal: reserve/release with idempotency. Acceptance: no double-decrement.,"P1, inventory",Sprint 3
+Remix: seller inventory UI,Goal: table+form to update stock. Acceptance: auth required; persists.,"P2, inventory",Sprint 3
+Inventory contention tests,Goal: simulate concurrent reservations. Acceptance: tests prove correctness.,"P2, inventory",Sprint 3
+Elasticsearch index + mapping,Goal: product index with filter fields. Acceptance: index ready.,"P2, search",Sprint 4
+Index on product upsert,Goal: in-proc event to ES. Acceptance: new product searchable in seconds.,"P2, search",Sprint 4
+Search API with filters,Endpoint: GET /search?q&category&make&model&year&engine&page&size. Acceptance: ranked results.,"P1, search",Sprint 4
+Zero-result analytics,Goal: log queries with no hits. Acceptance: view or dashboard exists.,"P2, search",Sprint 4
+"Orders schema (carts,orders,items,statuses)",Goal: base tables. Acceptance: migration applied.,"P2, orders",Sprint 5
+Cart API (add/list),"Endpoints: POST /cart/items, GET /cart. Acceptance: multi-seller cart.","P2, orders",Sprint 5
+Checkout transaction (atomic),"Goal: reserve stock, create order, clear cart. Acceptance: all-or-nothing; idempotent.","P1, orders",Sprint 5
+Order detail + status timeline,Endpoint: GET /orders/:id. Acceptance: items+sellers+history.,"P2, orders",Sprint 5
+Remix: cart + checkout pages,Goal: E2E from cart to order. Acceptance: errors handled; empty cart UX.,"P2, orders",Sprint 5
+Payments schema & ledger,"Tables: intents, holds, captures, refunds, payout_ledger. Acceptance: audit trail.","P1, payments",Sprint 6
+PaymentsPort interface + sandbox adapter,Goal: abstract Telebirr/HelloCash; implement sandbox. Acceptance: unit tests.,"P1, payments",Sprint 6
+Authorize hold at checkout,Flow: order pending → hold created. Acceptance: failure rolls back.,"P1, payments",Sprint 6
+Capture on delivery / Release on cancel,Flow: delivered→capture; cancel→release/refund. Acceptance: idempotent.,"P1, payments",Sprint 6
+Payout report (commission),Goal: seller earnings minus commission. Acceptance: CSV export.,"P2, payments",Sprint 6
+Notification service (email/SMS stub),Goal: provider abstraction; dev logs. Acceptance: triggers on key events.,"P2, notifications",Sprint 7
+Order lifecycle notifications,"Events: placed, shipped, delivered. Acceptance: logged/sent.","P2, notifications",Sprint 7
+Reviews schema & API,"Endpoint: POST /reviews (after delivered), GET /reviews. Acceptance: moderation flag.","P2, reviews",Sprint 7
+Remix: review form & list,Goal: post-purchase review UX. Acceptance: eligible orders only.,"P2, reviews",Sprint 7
+Admin dashboard (approve sellers,Route: /admin. Acceptance: role-guarded; basic tables. moderate listings),"P2, admin",Sprint 8
+Seller dashboard (listings,Route: /seller. Acceptance: auth; CRUD flows. inventory,"orders), P2, seller",Sprint 8
+SSR auth guard for Remix routes,Goal: protect loaders with JWT cookies. Acceptance: unauth → login.,"P2, admin",Sprint 8
+Design system pass (Tailwind components),"Goal: table, form, badge, modal primitives. Acceptance: reusable.","P2, infra",Sprint 8
+Global + per-route rate limiting,Goal: token bucket; strict on auth & payments. Acceptance: load test throttles.,"P1, security",Sprint 9
+"CORS,cookies,CSRF posture",Goal: same-origin prod; secure httpOnly cookies; CSRF if needed. Acceptance: checklist ticked.,"P2, security",Sprint 9
+Input validation & output encoding audit,Goal: class-validator everywhere; XSS-safe outputs. Acceptance: lint rule for DTOs.,"P2, security",Sprint 9
+Secrets management & HTTPS,Goal: no secrets in repo; enforce HTTPS. Acceptance: env review done.,"P2, security",Sprint 9
+Pen-test checklist & fixes,Goal: address XSS/CSRF/SQLi findings. Acceptance: 0 high/critical left.,"P1, security",Sprint 9
+Structured logging with requestId,Goal: correlate logs per request/user. Acceptance: format documented.,"P2, observability",Sprint 10
+Error tracking (Sentry) for API & web,Goal: capture exceptions with context. Acceptance: test error visible.,"P2, observability",Sprint 10
+Health checks for DB/Redis/ES,Goal: /health includes dependency status. Acceptance: fails fast if down.,"P2, observability",Sprint 10
+Basic metrics dashboard,"Goal: req/s, p95 latency, DB pool, cache hit rate. Acceptance: dashboard saved.","P2, observability",Sprint 10
+Response caching for hot GETs,Goal: Redis-backed cache; keys/TTL documented. Acceptance: hit rate tracked.,"P2, performance",Sprint 11
+DB index review & N+1 fixes,Goal: add/adjust indexes; batch queries. Acceptance: k6 shows improvements.,"P2, performance",Sprint 11
+"k6 load test: search,list,checkout",Goal: scripts + results. Acceptance: budgets met.,"P2, performance",Sprint 11
+Image optimization & CDN plan,Goal: WebP/AVIF and sizes; choose CDN. Acceptance: improved CLS/LCP.,"P2, performance",Sprint 11
+E2E tests for top 10 flows,Goal: Cypress/Playwright suite. Acceptance: green in CI.,"P2, prelaunch",Sprint 12
+Backup & restore drill,Goal: nightly pg_dump + verified restore.,"P2, prelaunch",Sprint 12
+Go-Live runbook & rollback plan,"Goal: incident contacts, playbooks.","P2, prelaunch",Sprint 12
+Policies published (ToS/Privacy/Seller),Goal: pages live and linked.,"P2, prelaunch",Sprint 12
