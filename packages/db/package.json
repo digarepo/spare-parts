@@ -6,10 +6,15 @@
     "build": "tsc -p tsconfig.json",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/seed.ts",
+    "seed:clean": "tsx src/seed.ts --clean"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.4"
+    "@types/node": "^24.3.1",
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.5"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.5"
