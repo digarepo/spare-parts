@@ -1,11 +1,8 @@
-import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import type { Pool as PoolType, PoolConfig } from 'pg';
+import { makePool } from '@spare-parts/db/src/pool';
+import * as DBSchema from '@spare-parts/db/src/schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
-import { env } from './config/env';
-
-const pgConfig: PoolConfig = { connectionString: env.DATABASE_URL };
-const pool: PoolType = new Pool(pgConfig);
-
-export const pg: PoolType = pool;
-export const db: NodePgDatabase = drizzle(pool, { logger: false });
+const pool = makePool();
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export const db = drizzle<typeof DBSchema>(pool, { schema: DBSchema });
+export const pg = pool;
