@@ -1,8 +1,18 @@
-import { makePool } from '@spare-parts/db/src/pool';
-import * as DBSchema from '@spare-parts/db/src/schema';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import 'dotenv/config';
+import * as iam from '@spare-parts/db/src/schema/iam';
+import * as rbac from '@spare-parts/db/src/schema/rbac';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool, type PoolClient } from 'pg';
 
-const pool = makePool();
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-export const db = drizzle<typeof DBSchema>(pool, { schema: DBSchema });
-export const pg = pool;
+export const schema = { ...rbac, ...iam };
+export type AppDb = NodePgDatabase<typeof schema>;
+
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Global db (OK for non-tenant ops like /health)
+export const db: AppDb = drizzle(pool, { schema });
+
+// Helper to create a request-scoped db from a single pg client
+export function drizzleFromClient(client: PoolClient): AppDb {
+  return drizzle(client, { schema });
+}

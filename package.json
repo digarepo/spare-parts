@@ -15,7 +15,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "prepare": "husky",
-    "build": "npm -ws run build",
+    "build": "npm --workspaces --if-present run build",
     "clean": "git clean -fdX -e '",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down -v",
