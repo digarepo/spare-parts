@@ -15,6 +15,13 @@
       "when": 1757292380848,
       "tag": "0001_curly_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757423874437,
+      "tag": "0002_high_satana",
+      "breakpoints": true
     }
   ]
 }

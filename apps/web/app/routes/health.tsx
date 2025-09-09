@@ -1,30 +1,46 @@
-import { useLoaderData } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
+import { useLoaderData } from 'react-router-dom';
 
-type LoaderData = {
-  ok: boolean;
-  raw?: unknown;
-  error?: string;
-};
+type Health = { ok: boolean };
 
-export async function loader(_args: LoaderFunctionArgs): Promise<LoaderData> {
-  const base = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${base}/health`, { headers: { accept: 'application/json' } });
-  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-  const json = await res.json().catch(() => ({}));
-  return { ok: Boolean((json as any)?.ok), raw: json };
+const API: string =
+  (import.meta as unknown as { env: Record<string, string | undefined> }).env['VITE_API_URL'] ??
+  'http://localhost:3000';
+
+function isHealth(value: unknown): value is Health {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return typeof obj.ok === 'boolean';
 }
 
-export default function HealthPage() {
-  const data = useLoaderData() as LoaderData;
+export async function loader({ request }: LoaderFunctionArgs): Promise<Health> {
+  void request;
+
+  const res = await fetch(`${API}/health`, { headers: { accept: 'application/json' } });
+  if (!res.ok) {
+    throw new Response(JSON.stringify({ message: 'API health check failed' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const data: unknown = await res.json();
+  if (!isHealth(data)) {
+    throw new Response(JSON.stringify({ message: 'Unexpected API response' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return data;
+}
+
+export default function HealthRoute() {
+  const data = useLoaderData<Health>();
   return (
-    <main style={{ padding: 24 }}>
-      <h2>API Health</h2>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-      <p>
-        Status:{' '}
-        <strong style={{ color: data.ok ? 'green' : 'red' }}>{data.ok ? 'UP' : 'DOWN'}</strong>
-      </p>
-    </main>
+    <div style={{ padding: 16 }}>
+      <h2>Health</h2>
+      <p>API OK: {String(data.ok)}</p>
+    </div>
   );
 }
