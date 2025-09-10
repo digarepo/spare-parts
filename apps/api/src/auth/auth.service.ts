@@ -1,5 +1,5 @@
 import { users } from '@spare-parts/db/src/schema/iam';
-import { memberships, tenants } from '@spare-parts/db/src/schema/rbac';
+import { memberships, tenants, roles, userRoles } from '@spare-parts/db/src/schema/rbac';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '../db';
@@ -42,6 +42,23 @@ export class AuthService {
       inserted ?? (await db.select().from(users).where(eq(users.email, email)).limit(1))[0];
 
     if (!user) throw new Error('User upsert failed');
+
+    const [readonlyRole] = await db
+      .select()
+      .from(roles)
+      .where(and(eq(roles.key, 'platform.readonly'), eq(roles.scope, 'platform')))
+      .limit(1);
+
+    if (readonlyRole) {
+      await db
+        .insert(userRoles)
+        .values({
+          userId: user.id,
+          tenantId: tenant.id,
+          roleId: readonlyRole.id,
+        })
+        .onConflictDoNothing();
+    }
 
     await db
       .insert(memberships)

@@ -22,6 +22,13 @@
       "when": 1757423874437,
       "tag": "0002_high_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1757430150063,
+      "tag": "0003_strange_songbird",
+      "breakpoints": true
     }
   ]
 }
