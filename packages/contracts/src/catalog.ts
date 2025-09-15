@@ -18,3 +18,12 @@ export const ProductCreateSchema = z.object({
 });
 
 export type ProductCreate = z.infer<typeof ProductCreateSchema>;
+
+export const CategoryCreateSchema = z.object({
+  name: z.string().min(1).max(160),
+  slug: z.string().min(1).max(180),
+  parentId: z.string().uuid().nullish(),
+  description: z.string().optional(),
+});
+
+export type CategoryCreate = z.infer<typeof CategoryCreateSchema>;
