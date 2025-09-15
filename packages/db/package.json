@@ -10,7 +10,8 @@
     "seed": "tsx src/seed.ts",
     "seed:clean": "tsx src/seed.ts --clean",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "rls:enable": "tsx src/rls.ts"
+    "rls:enable": "tsx src/rls.ts",
+    "seed:catalog": "tsx src/seed-catalog.ts"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
