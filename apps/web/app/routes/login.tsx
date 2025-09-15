@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router';
+
 import { api, setAuth, type LoginResponse } from '../lib/api';
 
 export default function Login() {
@@ -11,6 +12,7 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setBusy(true);
+
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get('email') ?? '');
     const password = String(fd.get('password') ?? '');
@@ -21,7 +23,7 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
       setAuth(resp);
-      navigate('/app');
+      void navigate('/app');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Login failed';
       setError(msg);

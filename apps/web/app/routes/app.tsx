@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { redirect, useLoaderData, type ClientLoaderFunctionArgs } from 'react-router';
+import { redirect, useLoaderData } from 'react-router';
+
 import { api, type MeResponse, type TenantOverviewResponse } from '../lib/api';
 import { storage } from '../lib/storage';
 
 type AppData = { me: MeResponse; overview: TenantOverviewResponse };
 
-export async function clientLoader(_: ClientLoaderFunctionArgs): Promise<AppData | Response> {
+export async function clientLoader(): Promise<AppData | Response> {
   const token = storage.getItem('access_token');
   if (!token) return redirect('/login');
 
@@ -15,7 +16,7 @@ export async function clientLoader(_: ClientLoaderFunctionArgs): Promise<AppData
 }
 
 export default function AppShell() {
-  const { me, overview } = useLoaderData() as AppData;
+  const { me, overview } = useLoaderData<AppData>();
   return (
     <div className="p-6">
       <div className="mb-4 text-sm">
