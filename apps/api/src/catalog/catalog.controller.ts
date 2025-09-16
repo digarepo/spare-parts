@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req, Param } from '@nestjs/common';
 import type { Request } from 'express';
 import { ProductCreateSchema } from 'packages/contracts/src/catalog';
 import { z } from 'zod';
@@ -29,6 +29,15 @@ const ListQuery = z
     ...d,
     categoryId: d.categoryId === 'null' ? null : d.categoryId,
   }));
+
+const FitmentQuery = z.object({
+  make: z.string().min(1),
+  model: z.string().min(1),
+  year: z.coerce.number().int().min(1900).max(2100),
+  engine: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 @Controller('catalog')
 @UseGuards(JwtGuard, PermissionsGuard)
@@ -63,5 +72,19 @@ export class CatalogController {
       if (msg.includes('prod_tenant_slug_uq')) return { ok: false, error: 'slug_exists' };
       throw e;
     }
+  }
+
+  @Get('products/:slug')
+  @RequirePermissions('catalog.sku.read')
+  async bySlug(@Req() req: AuthedRequest, @Param('slug') slug: string) {
+    const product = await CatalogService.getProductBySlug(req.user.tenantId, slug);
+    return product ? { ok: true, product } : { ok: false, error: 'not_found' };
+  }
+
+  @Get('fitment')
+  @RequirePermissions('catalog.sku.read')
+  async fitment(@Req() req: AuthedRequest, @Query() query: unknown) {
+    const dto = FitmentQuery.parse(query);
+    return CatalogService.searchProductsByFitment(req.user.tenantId, dto);
   }
 }

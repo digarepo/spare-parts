@@ -1,6 +1,13 @@
-// apps/api/src/catalog/catalog.service.ts
-import { products, categories } from '@spare-parts/db/src/schema/catalog';
-import { and, eq, ilike, isNull, desc, sql, type SQL } from 'drizzle-orm';
+import {
+  products,
+  categories,
+  productImages,
+  vehicleMakes,
+  vehicleModels,
+  vehicleTrims,
+  productFitments,
+} from '@spare-parts/db/src/schema/catalog';
+import { and, eq, ilike, isNull, desc, sql, type SQL, inArray, gte, lte } from 'drizzle-orm';
 import type { ProductCreate } from 'packages/contracts/src/catalog';
 
 import { withTenantDb } from '../db';
@@ -48,11 +55,10 @@ export class CatalogService {
         .offset(offset);
 
       // Typed COUNT(*) with safe read
-      const countRows = await rdb
+      const [{ value: total } = { value: 0 }] = await rdb
         .select({ value: sql<number>`count(*)`.mapWith(Number) })
         .from(products)
         .where(where);
-      const total = countRows[0]?.value ?? 0;
 
       return {
         items,
@@ -98,6 +104,142 @@ export class CatalogService {
         .returning();
 
       return inserted[0]!;
+    });
+  }
+
+  static async getProductBySlug(tenantId: string, slug: string) {
+    return withTenantDb(tenantId, async (rdb) => {
+      const [row] = await rdb
+        .select({
+          id: products.id,
+          name: products.name,
+          slug: products.slug,
+          sku: products.sku,
+          status: products.status,
+          price: products.price,
+          currency: products.currency,
+          stockQty: products.stockQty,
+          shortDesc: products.shortDesc,
+          description: products.description,
+          categoryId: products.categoryId,
+          createdAt: products.createdAt,
+        })
+        .from(products)
+        .where(and(eq(products.tenantId, tenantId), eq(products.slug, slug)))
+        .limit(1);
+
+      if (!row) return null;
+
+      const [img] = await rdb
+        .select({ url: productImages.url, alt: productImages.alt })
+        .from(productImages)
+        .where(and(eq(productImages.productId, row.id), eq(productImages.isPrimary, true)))
+        .limit(1);
+
+      return { ...row, primaryImage: img ?? null };
+    });
+  }
+
+  static async searchProductsByFitment(
+    tenantId: string,
+    params: {
+      make: string; // make slug, e.g., "toyota"
+      model: string; // model slug, e.g., "corolla"
+      year: number; // e.g., 2016
+      engine?: string | undefined; // optional, fuzzy contains
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const { make, model, year, engine, page = 1, pageSize = 20 } = params;
+
+    return withTenantDb(tenantId, async (rdb) => {
+      const [mk] = await rdb
+        .select({ id: vehicleMakes.id })
+        .from(vehicleMakes)
+        .where(eq(vehicleMakes.slug, make))
+        .limit(1);
+      if (!mk) return { items: [], page, pageSize, total: 0, pages: 1 };
+
+      const [mdl] = await rdb
+        .select({ id: vehicleModels.id })
+        .from(vehicleModels)
+        .where(and(eq(vehicleModels.slug, model), eq(vehicleModels.makeId, mk.id)))
+        .limit(1);
+      if (!mdl) return { items: [], page, pageSize, total: 0, pages: 1 };
+
+      const trimConds: [SQL, ...SQL[]] = [
+        eq(vehicleTrims.modelId, mdl.id),
+        lte(vehicleTrims.yearStart, year),
+        gte(vehicleTrims.yearEnd, year),
+      ];
+      if (engine && engine.trim()) {
+        trimConds.push(ilike(vehicleTrims.engine, `%${engine.trim()}%`));
+      }
+
+      const trimWhere: (SQL | undefined)[] = [
+        eq(vehicleTrims.modelId, mdl.id),
+        lte(vehicleTrims.yearStart, year),
+        gte(vehicleTrims.yearEnd, year),
+        engine !== undefined ? ilike(vehicleTrims.engine, `%${engine}%`) : undefined,
+      ];
+
+      const trims = await rdb
+        .select({ id: vehicleTrims.id })
+        .from(vehicleTrims)
+        .where(and(...(trimWhere.filter(Boolean) as SQL[])));
+
+      if (trims.length === 0) return { items: [], page, pageSize, total: 0, pages: 1 };
+
+      const trimIds = trims.map((t) => t.id);
+      const offset = (page - 1) * pageSize;
+
+      const rows = await rdb
+        .select({
+          id: products.id,
+          name: products.name,
+          slug: products.slug,
+          sku: products.sku,
+          status: products.status,
+          price: products.price,
+          currency: products.currency,
+          stockQty: products.stockQty,
+          createdAt: products.createdAt,
+        })
+        .from(productFitments)
+        .innerJoin(products, eq(productFitments.productId, products.id))
+        .where(
+          and(
+            eq(productFitments.tenantId, tenantId),
+            inArray(productFitments.trimId, trimIds),
+            eq(products.tenantId, tenantId),
+            eq(products.status, 'active'),
+          ),
+        )
+        .orderBy(desc(products.createdAt))
+        .limit(pageSize)
+        .offset(offset);
+
+      const [{ value: total } = { value: 0 }] = await rdb
+        .select({ value: sql<number>`count(*)`.mapWith(Number) })
+        .from(productFitments)
+        .innerJoin(products, eq(productFitments.productId, products.id))
+        .where(
+          and(
+            eq(productFitments.tenantId, tenantId),
+            inArray(productFitments.trimId, trimIds),
+            eq(products.tenantId, tenantId),
+            eq(products.status, 'active'),
+          ),
+        );
+
+      return {
+        items: rows,
+        page,
+        pageSize,
+        total,
+        pages: Math.max(1, Math.ceil(total / pageSize)),
+      };
     });
   }
 }
