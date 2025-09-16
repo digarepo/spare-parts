@@ -27,3 +27,34 @@ export const CategoryCreateSchema = z.object({
 });
 
 export type CategoryCreate = z.infer<typeof CategoryCreateSchema>;
+
+export const ProductUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  slug: z.string().min(1).max(200).optional(),
+  sku: z.string().min(1).max(64).optional(),
+  categoryId: z.string().uuid().nullable().optional(),
+  currency: z.string().length(3).optional(),
+  price: z.coerce.number().min(0).optional(),
+  compareAtPrice: z.coerce.number().min(0).nullable().optional(),
+  stockQty: z.coerce.number().int().min(0).optional(),
+  attributes: z.record(z.string(), z.unknown()).optional(),
+  shortDesc: z.string().max(400).nullable().optional(),
+  description: z.string().nullable().optional(),
+  status: ProductStatus.optional(),
+});
+export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
+
+export const ProductImageCreateSchema = z.object({
+  url: z.string().url(),
+  alt: z.string().max(200).optional(),
+  isPrimary: z.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+});
+export type ProductImageCreate = z.infer<typeof ProductImageCreateSchema>;
+
+export const ProductImageUpdateSchema = z.object({
+  alt: z.string().max(200).optional(),
+  isPrimary: z.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+});
+export type ProductImageUpdate = z.infer<typeof ProductImageUpdateSchema>;

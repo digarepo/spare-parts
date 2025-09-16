@@ -8,7 +8,7 @@ import {
   productFitments,
 } from '@spare-parts/db/src/schema/catalog';
 import { and, eq, ilike, isNull, desc, sql, type SQL, inArray, gte, lte } from 'drizzle-orm';
-import type { ProductCreate } from 'packages/contracts/src/catalog';
+import type { ProductCreate, ProductUpdate } from 'packages/contracts/src/catalog';
 
 import { withTenantDb } from '../db';
 
@@ -240,6 +240,74 @@ export class CatalogService {
         total,
         pages: Math.max(1, Math.ceil(total / pageSize)),
       };
+    });
+  }
+
+  static async updateProduct(tenantId: string, productId: string, dto: ProductUpdate) {
+    return withTenantDb(tenantId, async (rdb) => {
+      // Ensure product belongs to tenant (RLS also enforces)
+      const [existing] = await rdb
+        .select({ id: products.id, status: products.status })
+        .from(products)
+        .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+        .limit(1);
+
+      if (!existing) throw new Error('not_found');
+
+      // Build a typed update object (no `any`, no Object.entries)
+      const next: Partial<typeof products.$inferInsert> = {};
+
+      if (dto.name !== undefined) next.name = dto.name;
+      if (dto.slug !== undefined) next.slug = dto.slug;
+      if (dto.sku !== undefined) next.sku = dto.sku;
+      if (dto.status !== undefined) next.status = dto.status;
+      if (dto.currency !== undefined) next.currency = dto.currency;
+      if (dto.price !== undefined && dto.price !== null) next.price = String(dto.price);
+      if (dto.compareAtPrice !== undefined) {
+        next.compareAtPrice = dto.compareAtPrice == null ? null : String(dto.compareAtPrice);
+      }
+      if (dto.stockQty !== undefined) next.stockQty = dto.stockQty;
+      if (dto.attributes !== undefined) next.attributes = dto.attributes;
+      if (dto.shortDesc !== undefined) next.shortDesc = dto.shortDesc;
+      if (dto.description !== undefined) next.description = dto.description;
+      if (dto.categoryId !== undefined) next.categoryId = dto.categoryId ?? null;
+
+      // Auto-publish timestamp when moving to active
+      if (next.status === 'active' && existing.status !== 'active') {
+        next.publishedAt = new Date();
+      }
+
+      // No-op update guard (optional)
+      if (Object.keys(next).length === 0) {
+        // nothing to update; return the current row shape consistently
+        const [row] = await rdb
+          .select()
+          .from(products)
+          .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+          .limit(1);
+        return row!;
+      }
+
+      const [row] = await rdb
+        .update(products)
+        .set(next)
+        .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+        .returning();
+
+      return row!;
+    });
+  }
+
+  static async deleteProduct(tenantId: string, productId: string) {
+    return withTenantDb(tenantId, async (rdb) => {
+      const [row] = await rdb
+        .update(products)
+        .set({ deletedAt: new Date(), status: 'archived' })
+        .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+        .returning();
+
+      if (!row) throw new Error('not_found');
+      return { ok: true as const };
     });
   }
 }
