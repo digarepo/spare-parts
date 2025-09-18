@@ -20,7 +20,6 @@ type AuthedRequest = Request & { user: AuthUser };
 const ListQuery = z
   .object({
     q: z.string().optional(),
-    // allow ?parentId=null to filter root categories
     parentId: z.union([z.string().uuid(), z.literal('null')]).optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),

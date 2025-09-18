@@ -19,15 +19,6 @@ export const ProductCreateSchema = z.object({
 
 export type ProductCreate = z.infer<typeof ProductCreateSchema>;
 
-export const CategoryCreateSchema = z.object({
-  name: z.string().min(1).max(160),
-  slug: z.string().min(1).max(180),
-  parentId: z.string().uuid().nullish(),
-  description: z.string().optional(),
-});
-
-export type CategoryCreate = z.infer<typeof CategoryCreateSchema>;
-
 export const ProductUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   slug: z.string().min(1).max(200).optional(),
@@ -58,3 +49,20 @@ export const ProductImageUpdateSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
 });
 export type ProductImageUpdate = z.infer<typeof ProductImageUpdateSchema>;
+
+export const CategoryCreateSchema = z.object({
+  name: z.string().min(1).max(160),
+  slug: z.string().min(1).max(180),
+  parentId: z.string().uuid().nullish(),
+  description: z.string().optional(),
+});
+
+export type CategoryCreate = z.infer<typeof CategoryCreateSchema>;
+
+export const CategoryUpdateSchema = z.object({
+  name: z.string().min(1).max(160).optional(),
+  slug: z.string().min(1).max(180).optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
+export type CategoryUpdate = z.infer<typeof CategoryUpdateSchema>;

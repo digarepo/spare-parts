@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Query,
+  UseGuards,
+  Req,
+  Param,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import { ProductCreateSchema } from 'packages/contracts/src/catalog';
+import { ProductCreateSchema, ProductUpdateSchema } from 'packages/contracts/src/catalog';
 import { z } from 'zod';
 
 import { JwtGuard } from '../auth/jwt.guard';
@@ -86,5 +97,34 @@ export class CatalogController {
   async fitment(@Req() req: AuthedRequest, @Query() query: unknown) {
     const dto = FitmentQuery.parse(query);
     return CatalogService.searchProductsByFitment(req.user.tenantId, dto);
+  }
+
+  @Patch('products/:id')
+  @RequirePermissions('catalog.sku.update')
+  async update(@Req() req: AuthedRequest, @Param('id') id: string, @Body() body: unknown) {
+    const dto = ProductUpdateSchema.parse(body);
+    try {
+      const row = await CatalogService.updateProduct(req.user.tenantId, id, dto);
+      return { ok: true, product: row };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'not_found') return { ok: false, error: 'not_found' };
+      if (msg.includes('prod_tenant_sku_uq')) return { ok: false, error: 'sku_exists' };
+      if (msg.includes('prod_tenant_slug_uq')) return { ok: false, error: 'slug_exists' };
+      throw e;
+    }
+  }
+
+  @Delete('products/:id')
+  @RequirePermissions('catalog.sku.update')
+  async remove(@Req() req: AuthedRequest, @Param('id') id: string) {
+    try {
+      const res = await CatalogService.deleteProduct(req.user.tenantId, id);
+      return res;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'not_found') return { ok: false, error: 'not_found' };
+      throw e;
+    }
   }
 }
