@@ -74,3 +74,18 @@ export const CategoryUpdateSchema = z.object({
   description: z.string().nullable().optional(),
 });
 export type CategoryUpdate = z.infer<typeof CategoryUpdateSchema>;
+
+export const FitmentAddByTrimIdsSchema = z.object({
+  trimIds: z.array(z.string().uuid()).min(1),
+});
+
+export const FitmentAddByCriteriaSchema = z.object({
+  make: z.string().min(1), // slug, e.g., "toyota"
+  model: z.string().min(1), // slug, e.g., "corolla"
+  yearStart: z.coerce.number().int().min(1900).max(2100),
+  yearEnd: z.coerce.number().int().min(1900).max(2100),
+  engine: z.string().optional(), // fuzzy contains
+});
+
+export type FitmentAddByTrimIds = z.infer<typeof FitmentAddByTrimIdsSchema>;
+export type FitmentAddByCriteria = z.infer<typeof FitmentAddByCriteriaSchema>;
