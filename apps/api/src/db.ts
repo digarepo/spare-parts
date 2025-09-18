@@ -60,3 +60,24 @@ export async function withTenantDb<T>(
     client.release();
   }
 }
+
+/** System (non-tenant) runner for auth/health/etc. */
+export async function withSystemDb<T>(fn: (rdb: AppDb) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const rdb = drizzleFromClient(client);
+    const result = await fn(rdb);
+    await client.query('COMMIT');
+    return result;
+  } catch (e) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}

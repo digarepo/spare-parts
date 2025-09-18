@@ -10,8 +10,12 @@ import {
   Req,
   Param,
 } from '@nestjs/common';
+import {
+  ProductCreateSchema,
+  ProductUpdateSchema,
+  ProductImageCreateSchema,
+} from '@spare-parts/contracts/src';
 import type { Request } from 'express';
-import { ProductCreateSchema, ProductUpdateSchema } from 'packages/contracts/src/catalog';
 import { z } from 'zod';
 
 import { JwtGuard } from '../auth/jwt.guard';
@@ -27,6 +31,7 @@ type AuthUser = {
   permissions?: Set<string>;
 };
 type AuthedRequest = Request & { user: AuthUser };
+const Uuid = z.string().uuid();
 
 const ListQuery = z
   .object({
@@ -126,5 +131,40 @@ export class CatalogController {
       if (msg === 'not_found') return { ok: false, error: 'not_found' };
       throw e;
     }
+  }
+
+  @Post('products/:id/images')
+  @RequirePermissions('catalog.sku.update')
+  async addImage(@Req() req: AuthedRequest, @Param('id') idParam: string, @Body() body: unknown) {
+    const productId = Uuid.parse(idParam); // validate UUID
+    const dto = ProductImageCreateSchema.parse(body); // typed DTO
+    const image = await CatalogService.addProductImage(req.user.tenantId, productId, dto);
+    return { ok: true, image };
+  }
+
+  @Patch('products/:id/images/:imageId/primary')
+  @RequirePermissions('catalog.sku.update')
+  async setPrimary(
+    @Req() req: AuthedRequest,
+    @Param('id') idParam: string,
+    @Param('imageId') imageIdParam: string,
+  ) {
+    const productId = Uuid.parse(idParam);
+    const imageId = Uuid.parse(imageIdParam);
+    const res = await CatalogService.setPrimaryImage(req.user.tenantId, productId, imageId);
+    return res;
+  }
+
+  @Delete('products/:id/images/:imageId')
+  @RequirePermissions('catalog.sku.update')
+  async deleteImage(
+    @Req() req: AuthedRequest,
+    @Param('id') idParam: string,
+    @Param('imageId') imageIdParam: string,
+  ) {
+    const productId = Uuid.parse(idParam);
+    const imageId = Uuid.parse(imageIdParam);
+    const res = await CatalogService.deleteImage(req.user.tenantId, productId, imageId);
+    return res;
   }
 }

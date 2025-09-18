@@ -95,6 +95,7 @@ export const productImages = pgTable(
   (t) => ({
     byProduct: index('pimg_product_idx').on(t.productId),
     byPrimary: index('pimg_primary_idx').on(t.isPrimary),
+    uqProductUrl: uniqueIndex('pimg_product_url_uq').on(t.productId, t.url),
   }),
 );
 

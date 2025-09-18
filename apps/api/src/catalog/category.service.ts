@@ -1,6 +1,6 @@
+import type { CategoryCreate } from '@spare-parts/contracts/src';
 import { categories } from '@spare-parts/db/src/schema/catalog';
 import { and, eq, ilike, isNull, desc, sql, type SQL } from 'drizzle-orm';
-import type { CategoryCreate } from 'packages/contracts/src/catalog';
 
 import { withTenantDb } from '../db';
 

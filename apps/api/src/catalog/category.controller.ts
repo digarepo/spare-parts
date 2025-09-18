@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { CategoryCreateSchema } from '@spare-parts/contracts/src';
 import type { Request } from 'express';
-import { CategoryCreateSchema } from 'packages/contracts/src/catalog';
 import { z } from 'zod';
 
 import { JwtGuard } from '../auth/jwt.guard';

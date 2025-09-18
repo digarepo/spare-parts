@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "pimg_product_url_uq" ON "product_images" USING btree ("product_id","url");

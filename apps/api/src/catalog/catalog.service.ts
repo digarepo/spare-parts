@@ -1,3 +1,4 @@
+import type { ProductCreate, ProductImageCreate, ProductUpdate } from '@spare-parts/contracts/src';
 import {
   products,
   categories,
@@ -7,8 +8,7 @@ import {
   vehicleTrims,
   productFitments,
 } from '@spare-parts/db/src/schema/catalog';
-import { and, eq, ilike, isNull, desc, sql, type SQL, inArray, gte, lte } from 'drizzle-orm';
-import type { ProductCreate, ProductUpdate } from 'packages/contracts/src/catalog';
+import { and, eq, ilike, isNull, desc, sql, type SQL, inArray, gte, lte, ne } from 'drizzle-orm';
 
 import { withTenantDb } from '../db';
 
@@ -27,13 +27,16 @@ export class CatalogService {
   ) {
     return withTenantDb(tenantId, async (rdb) => {
       // Build a guaranteed non-empty list of conditions
-      const conditions: [SQL, ...SQL[]] = [eq(products.tenantId, tenantId)];
-      if (q && q.trim()) conditions.push(ilike(products.name, `%${q.trim()}%`));
-      if (status) conditions.push(eq(products.status, status));
-      if (categoryId === null) conditions.push(isNull(products.categoryId));
-      else if (categoryId) conditions.push(eq(products.categoryId, categoryId));
+      const conds: (SQL | undefined)[] = [
+        eq(products.tenantId, tenantId),
+        isNull(products.deletedAt),
+      ];
+      if (q?.trim()) conds.push(ilike(products.name, `%${q.trim()}%`));
+      if (status) conds.push(eq(products.status, status));
+      if (categoryId === null) conds.push(isNull(products.categoryId));
+      else if (categoryId) conds.push(eq(products.categoryId, categoryId));
 
-      const where = and(...conditions);
+      const whereExpr = and(...(conds.filter(Boolean) as SQL[]));
       const offset = (page - 1) * pageSize;
 
       const items = await rdb
@@ -49,7 +52,7 @@ export class CatalogService {
           createdAt: products.createdAt,
         })
         .from(products)
-        .where(where)
+        .where(whereExpr)
         .orderBy(desc(products.createdAt))
         .limit(pageSize)
         .offset(offset);
@@ -58,7 +61,7 @@ export class CatalogService {
       const [{ value: total } = { value: 0 }] = await rdb
         .select({ value: sql<number>`count(*)`.mapWith(Number) })
         .from(products)
-        .where(where);
+        .where(whereExpr);
 
       return {
         items,
@@ -125,7 +128,9 @@ export class CatalogService {
           createdAt: products.createdAt,
         })
         .from(products)
-        .where(and(eq(products.tenantId, tenantId), eq(products.slug, slug)))
+        .where(
+          and(eq(products.tenantId, tenantId), eq(products.slug, slug), isNull(products.deletedAt)),
+        )
         .limit(1);
 
       if (!row) return null;
@@ -168,26 +173,19 @@ export class CatalogService {
         .limit(1);
       if (!mdl) return { items: [], page, pageSize, total: 0, pages: 1 };
 
-      const trimConds: [SQL, ...SQL[]] = [
+      const trimConds: (SQL | undefined)[] = [
         eq(vehicleTrims.modelId, mdl.id),
         lte(vehicleTrims.yearStart, year),
         gte(vehicleTrims.yearEnd, year),
       ];
-      if (engine && engine.trim()) {
+      if (engine?.trim()) {
         trimConds.push(ilike(vehicleTrims.engine, `%${engine.trim()}%`));
       }
-
-      const trimWhere: (SQL | undefined)[] = [
-        eq(vehicleTrims.modelId, mdl.id),
-        lte(vehicleTrims.yearStart, year),
-        gte(vehicleTrims.yearEnd, year),
-        engine !== undefined ? ilike(vehicleTrims.engine, `%${engine}%`) : undefined,
-      ];
 
       const trims = await rdb
         .select({ id: vehicleTrims.id })
         .from(vehicleTrims)
-        .where(and(...(trimWhere.filter(Boolean) as SQL[])));
+        .where(and(...(trimConds.filter(Boolean) as SQL[])));
 
       if (trims.length === 0) return { items: [], page, pageSize, total: 0, pages: 1 };
 
@@ -249,7 +247,13 @@ export class CatalogService {
       const [existing] = await rdb
         .select({ id: products.id, status: products.status })
         .from(products)
-        .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.tenantId, tenantId),
+            isNull(products.deletedAt),
+          ),
+        )
         .limit(1);
 
       if (!existing) throw new Error('not_found');
@@ -277,6 +281,8 @@ export class CatalogService {
         next.publishedAt = new Date();
       }
 
+      next.updatedAt = new Date();
+
       // No-op update guard (optional)
       if (Object.keys(next).length === 0) {
         // nothing to update; return the current row shape consistently
@@ -303,8 +309,116 @@ export class CatalogService {
       const [row] = await rdb
         .update(products)
         .set({ deletedAt: new Date(), status: 'archived' })
-        .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
-        .returning();
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.tenantId, tenantId),
+            isNull(products.deletedAt),
+          ),
+        )
+        .returning({ id: products.id });
+
+      if (!row) throw new Error('not_found');
+      return { ok: true as const };
+    });
+  }
+
+  static async addProductImage(tenantId: string, productId: string, dto: ProductImageCreate) {
+    return withTenantDb(tenantId, async (rdb) => {
+      // Verify product belongs to tenant and not deleted
+      const [p] = await rdb
+        .select({ id: products.id })
+        .from(products)
+        .where(
+          and(
+            eq(products.id, productId),
+            eq(products.tenantId, tenantId),
+            isNull(products.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!p) throw new Error('not_found_or_forbidden');
+
+      // Transaction: insert image, optionally set it primary atomically
+      const result = await rdb.transaction(async (trx) => {
+        const [img] = await trx
+          .insert(productImages)
+          .values({
+            productId,
+            url: dto.url,
+            alt: dto.alt ?? null,
+            isPrimary: !!dto.isPrimary,
+            sortOrder: dto.sortOrder ?? 0,
+          })
+          .returning();
+
+        if (!img) throw new Error('insert_failed');
+
+        if (dto.isPrimary) {
+          await trx
+            .update(productImages)
+            .set({ isPrimary: false })
+            .where(and(eq(productImages.productId, productId), ne(productImages.id, img.id)));
+          await trx
+            .update(productImages)
+            .set({ isPrimary: true })
+            .where(eq(productImages.id, img.id));
+        }
+
+        return img;
+      });
+
+      return result;
+    });
+  }
+
+  static async setPrimaryImage(tenantId: string, productId: string, imageId: string) {
+    return withTenantDb(tenantId, async (rdb) => {
+      // Validate image belongs to product & product belongs to tenant
+      const [check] = await rdb
+        .select({ imgId: productImages.id })
+        .from(productImages)
+        .innerJoin(products, eq(productImages.productId, products.id))
+        .where(
+          and(
+            eq(productImages.id, imageId),
+            eq(products.id, productId),
+            eq(products.tenantId, tenantId),
+            isNull(products.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (!check) throw new Error('not_found');
+
+      await rdb.transaction(async (trx) => {
+        await trx
+          .update(productImages)
+          .set({ isPrimary: false })
+          .where(eq(productImages.productId, productId));
+        await trx
+          .update(productImages)
+          .set({ isPrimary: true })
+          .where(eq(productImages.id, imageId));
+      });
+
+      return { ok: true as const };
+    });
+  }
+
+  static async deleteImage(tenantId: string, productId: string, imageId: string) {
+    return withTenantDb(tenantId, async (rdb) => {
+      // Ensure product belongs to tenant (join guards cross-tenant)
+      const [row] = await rdb
+        .delete(productImages)
+        .where(
+          and(
+            eq(productImages.id, imageId),
+            eq(productImages.productId, productId),
+            // join exists via RLS policy; explicit join not needed, but tenant match is enforced by RLS
+          ),
+        )
+        .returning({ id: productImages.id });
 
       if (!row) throw new Error('not_found');
       return { ok: true as const };
