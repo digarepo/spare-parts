@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+export interface CategoryNode {
+  id: string; // uuid
+  name: string;
+  slug: string;
+  parentId: string | null;
+  children: CategoryNode[];
+}
+
 export const ProductStatus = z.enum(['draft', 'active', 'archived']);
 
 export const ProductCreateSchema = z.object({

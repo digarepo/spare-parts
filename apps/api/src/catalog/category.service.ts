@@ -1,4 +1,4 @@
-import type { CategoryCreate } from '@spare-parts/contracts/src';
+import type { CategoryCreate, CategoryNode } from '@spare-parts/contracts/src';
 import { categories } from '@spare-parts/db/src/schema/catalog';
 import { and, eq, ilike, isNull, desc, sql, type SQL } from 'drizzle-orm';
 
@@ -78,6 +78,39 @@ export class CategoryService {
         .returning();
 
       return inserted[0]!;
+    });
+  }
+
+  static async tree(tenantId: string): Promise<CategoryNode[]> {
+    return withTenantDb(tenantId, async (rdb) => {
+      const rows = await rdb
+        .select({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          parentId: categories.parentId,
+        })
+        .from(categories)
+        .where(eq(categories.tenantId, tenantId));
+
+      // Build nodes map (id -> node) with empty children arrays
+      const nodeById = new Map<string, CategoryNode>();
+      for (const r of rows) {
+        nodeById.set(r.id, { ...r, children: [] });
+      }
+
+      // Attach children to parents; collect roots
+      const roots: CategoryNode[] = [];
+      for (const node of nodeById.values()) {
+        const { parentId } = node;
+        if (parentId && nodeById.has(parentId)) {
+          nodeById.get(parentId)!.children.push(node);
+        } else {
+          roots.push(node);
+        }
+      }
+
+      return roots;
     });
   }
 }

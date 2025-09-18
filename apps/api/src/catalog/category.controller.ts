@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
-import { CategoryCreateSchema } from '@spare-parts/contracts/src';
+import { CategoryCreateSchema, CategoryNode } from '@spare-parts/contracts/src';
 import type { Request } from 'express';
 import { z } from 'zod';
 
@@ -44,6 +44,13 @@ export class CategoryController {
       pageSize: parsed.pageSize,
     };
     return CategoryService.list(req.user.tenantId, filters);
+  }
+
+  @Get('categories/tree')
+  @RequirePermissions('catalog.sku.read') // reuse read permission
+  async tree(@Req() req: AuthedRequest): Promise<{ ok: true; tree: CategoryNode[] }> {
+    const tree = await CategoryService.tree(req.user.tenantId);
+    return { ok: true, tree };
   }
 
   @Post('categories')
