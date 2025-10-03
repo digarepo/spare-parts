@@ -10,6 +10,7 @@ import { DbHealthController } from '../routes/db-health.controller';
 import { EnvHealthController } from '../routes/env-health.controller';
 import { HealthController } from '../routes/health.controller';
 import { MeController } from '../routes/me.controller';
+import { PublicCatalogController } from '../routes/public-catalog.controller';
 import { TenantController } from '../routes/tenant.controller';
 @Module({
   controllers: [
@@ -21,6 +22,7 @@ import { TenantController } from '../routes/tenant.controller';
     AuthController,
     CatalogController,
     CategoryController,
+    PublicCatalogController,
   ],
   providers: [
     Reflector,
