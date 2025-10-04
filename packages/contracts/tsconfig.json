@@ -4,7 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "emitDeclarationOnly": false
   },
   "include": ["src/**/*.ts"]
 }

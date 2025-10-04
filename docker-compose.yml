@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: spareparts_postgres
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-spareparts}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spareparts}
@@ -11,7 +11,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spareparts} -d ${POSTGRES_DB:-spareparts}"]
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-spareparts} -d ${POSTGRES_DB:-spareparts}']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -19,9 +20,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: spareparts_redis
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redisdata:/data
 
@@ -37,7 +38,7 @@ services:
         soft: -1
         hard: -1
     ports:
-      - "${ELASTIC_PORT:-9200}:9200"
+      - '${ELASTIC_PORT:-9200}:9200'
     volumes:
       - esdata:/usr/share/elasticsearch/data
 

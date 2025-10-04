@@ -11,13 +11,17 @@
     "rootDirs": ["./", "./.react-router/types"],
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
   },
   "include": [
     "app/**/*.ts",
     "app/**/*.tsx",
     "vite.config.ts",
+    "entry.client.tsx",
+    "entry.server.tsx",
     ".react-router/types/**/*",
     "env.d.ts"
+    // "server.ts"
   ]
 }

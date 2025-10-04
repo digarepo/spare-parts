@@ -7,4 +7,12 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig({
   plugins: [tailwindcss(), react(), reactRouter(), tsconfigPaths()],
   css: { transformer: 'postcss' },
+  server: {
+    proxy: {
+      '^/(auth|catalog|health)': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 });
