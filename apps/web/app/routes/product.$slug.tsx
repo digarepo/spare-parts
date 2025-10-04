@@ -1,17 +1,30 @@
-import { type LoaderFunctionArgs, useLoaderData, Link } from 'react-router-dom';
+import { type LoaderFunctionArgs } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { z } from 'zod';
 
-type ProductDetail = {
-  id: string;
-  name: string;
-  slug: string;
-  sku: string;
-  price: string;
-  currency: string;
-  status: string;
-  shortDesc?: string;
-  description?: string;
-  primaryImage?: { url: string; alt?: string } | null;
-};
+import { useTypedLoaderData } from '../lib/useTypedLoaderData';
+
+const ProductDetailSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  sku: z.string(),
+  price: z.string(),
+  currency: z.string(),
+  status: z.string(),
+  shortDesc: z.string().optional(),
+  description: z.string().optional(),
+  primaryImage: z
+    .object({ url: z.string().url(), alt: z.string().optional() })
+    .nullable()
+    .optional(),
+});
+
+const ProductDetailResponseSchema = z.object({
+  product: ProductDetailSchema,
+});
+
+type ProductDetailResponse = z.infer<typeof ProductDetailResponseSchema>;
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const apiBase = import.meta.env.VITE_API_BASE as string;
@@ -21,15 +34,21 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const res = await fetch(`${apiBase}/catalog/products/${params.slug}`, { headers });
   if (res.status === 404) throw new Response('Not found', { status: 404 });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => 'Failed to load product');
+    throw new Response(msg || 'Failed to load product', { status: res.status });
+  }
 
-  const data = await res.json();
-  if (!data.ok) throw new Response(data.error ?? 'Failed', { status: 400 });
+  const parsed = ProductDetailResponseSchema.parse((await res.json()) as unknown);
 
-  return data.product as ProductDetail;
+  return new Response(JSON.stringify(parsed), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 export default function ProductDetailPage() {
-  const p = useLoaderData() as ProductDetail;
+  const { product: p } = useTypedLoaderData<ProductDetailResponse>();
+
   return (
     <main className="p-6 max-w-3xl mx-auto">
       <Link to="/products" className="text-sm opacity-70">

@@ -1,0 +1,1 @@
+ALTER TABLE "inventory" ADD CONSTRAINT "chk_inventory_qty_nonneg" CHECK ("inventory"."qty" >= 0);

@@ -43,6 +43,20 @@
       "when": 1758201679837,
       "tag": "0005_minor_ozymandias",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1759584107580,
+      "tag": "0006_flat_sentry",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1759586348383,
+      "tag": "0007_zippy_franklin_richards",
+      "breakpoints": true
     }
   ]
 }

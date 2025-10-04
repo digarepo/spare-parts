@@ -12,7 +12,11 @@ import { HealthController } from '../routes/health.controller';
 import { MeController } from '../routes/me.controller';
 import { PublicCatalogController } from '../routes/public-catalog.controller';
 import { TenantController } from '../routes/tenant.controller';
+
+import { DatabaseModule } from './database.module';
+import { InventoryModule } from './inventory.module';
 @Module({
+  imports: [InventoryModule, DatabaseModule],
   controllers: [
     HealthController,
     DbHealthController,

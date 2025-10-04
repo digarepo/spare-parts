@@ -1,16 +1,29 @@
-import { type LoaderFunctionArgs, useLoaderData, Link, useSearchParams } from 'react-router-dom';
+import { type LoaderFunctionArgs } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { z } from 'zod';
 
-type Product = {
-  id: string;
-  name: string;
-  slug: string;
-  sku: string;
-  price: string;
-  currency: string;
-  status: 'draft' | 'active' | 'archived';
-  createdAt: string;
-};
-type ListResp = { items: Product[]; page: number; pageSize: number; total: number; pages: number };
+import { useTypedLoaderData } from '../lib/useTypedLoaderData';
+
+const ProductSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  sku: z.string(),
+  price: z.string(),
+  currency: z.string(),
+  status: z.enum(['draft', 'active', 'archived']),
+  createdAt: z.string(),
+});
+
+const ListRespSchema = z.object({
+  items: z.array(ProductSchema),
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1),
+  total: z.number().int().min(0),
+  pages: z.number().int().min(0),
+});
+
+type ListResp = z.infer<typeof ListRespSchema>;
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -18,7 +31,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const pageSize = url.searchParams.get('pageSize') ?? '12';
   const apiBase = import.meta.env.VITE_API_BASE as string;
 
-  // Forward cookie (server) → Authorization header used by API (if you set it there).
   const headers: HeadersInit = {};
   const auth = request.headers.get('cookie')?.match(/access_token=([^;]+)/)?.[1];
   if (auth) headers['Authorization'] = `Bearer ${auth}`;
@@ -26,19 +38,20 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const res = await fetch(`${apiBase}/catalog/products?page=${page}&pageSize=${pageSize}`, {
     headers,
   });
-  if (!res.ok)
-    throw new Response('Failed to load products', {
-      status: res.status,
-      statusText: 'Failed to load products',
-    });
-  const data = (await res.json()) as ListResp;
-  return new Response(JSON.stringify(data), {
+  if (!res.ok) {
+    const msg = await res.text().catch(() => 'Failed to load products');
+    throw new Response(msg || 'Failed to load products', { status: res.status });
+  }
+
+  const parsed = ListRespSchema.parse((await res.json()) as unknown);
+
+  return new Response(JSON.stringify(parsed), {
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
 export default function ProductsPage() {
-  const data = useLoaderData() as ListResp;
+  const data = useTypedLoaderData<ListResp>();
   const [params] = useSearchParams();
   const page = Number(params.get('page') ?? '1');
   const pageSize = Number(params.get('pageSize') ?? '12');
