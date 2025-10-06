@@ -84,10 +84,45 @@ async function main() {
     USING (tenant_id = ${TENANT_GUC})
     WITH CHECK (tenant_id = ${TENANT_GUC})`);
 
+  // ===== Inventory =====
+  statements.push(sql`ALTER TABLE inventory ENABLE ROW LEVEL SECURITY`);
+  statements.push(sql`DROP POLICY IF EXISTS inventory_isolation ON inventory`);
+  statements.push(sql`DROP POLICY IF EXISTS inventory_write_tenant ON inventory`);
+  statements.push(sql`CREATE POLICY inventory_isolation ON inventory
+  USING (tenant_id = ${TENANT_GUC})`);
+  statements.push(sql`CREATE POLICY inventory_write_tenant ON inventory
+  FOR ALL TO PUBLIC
+  USING (tenant_id = ${TENANT_GUC})
+  WITH CHECK (tenant_id = ${TENANT_GUC})`);
+
+  // ===== Checkout: reservations =====
+  statements.push(sql`ALTER TABLE reservations ENABLE ROW LEVEL SECURITY`);
+  statements.push(sql`DROP POLICY IF EXISTS reservations_isolation ON reservations`);
+  statements.push(sql`DROP POLICY IF EXISTS reservations_write_tenant ON reservations`);
+  statements.push(sql`CREATE POLICY reservations_isolation ON reservations
+  USING (tenant_id = ${TENANT_GUC})`);
+  statements.push(sql`CREATE POLICY reservations_write_tenant ON reservations
+  FOR ALL TO PUBLIC
+  USING (tenant_id = ${TENANT_GUC})
+  WITH CHECK (tenant_id = ${TENANT_GUC})`);
+
+  // ===== Checkout: reservation_items =====
+  statements.push(sql`ALTER TABLE reservation_items ENABLE ROW LEVEL SECURITY`);
+  statements.push(sql`DROP POLICY IF EXISTS res_items_isolation ON reservation_items`);
+  statements.push(sql`DROP POLICY IF EXISTS res_items_write_tenant ON reservation_items`);
+  statements.push(sql`CREATE POLICY res_items_isolation ON reservation_items
+  USING (tenant_id = ${TENANT_GUC})`);
+  statements.push(sql`CREATE POLICY res_items_write_tenant ON reservation_items
+  FOR ALL TO PUBLIC
+  USING (tenant_id = ${TENANT_GUC})
+  WITH CHECK (tenant_id = ${TENANT_GUC})`);
+
   // Execute in order
-  for (const s of statements) {
-    await db.execute(s);
-  }
+  await db.transaction(async (tx) => {
+    for (const s of statements) {
+      await tx.execute(s);
+    }
+  });
 
   console.log('✅ RLS policies applied (safe). Use withTenantDb() to set app.tenant_id.');
   await pool.end();

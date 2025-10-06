@@ -43,6 +43,9 @@ async function main() {
     'payout.read',
     'report.financial.download',
     'report.operations.download',
+    'checkout.reserve',
+    'checkout.release',
+    'checkout.commit',
   ] as const;
   for (const key of permDefs) {
     await db.insert(permissions).values({ key }).onConflictDoNothing();
@@ -143,6 +146,9 @@ async function main() {
       'orders.refund.approve',
       'payout.create',
       'payout.read',
+      'checkout.reserve',
+      'checkout.release',
+      'checkout.commit',
     ],
     'org.admin': [
       'user.manage',
@@ -163,6 +169,9 @@ async function main() {
       'orders.read',
       'orders.refund.initiate',
       'payout.read',
+      'checkout.reserve',
+      'checkout.release',
+      'checkout.commit',
     ],
     'org.catalog': [
       'catalog.sku.create',
@@ -172,8 +181,21 @@ async function main() {
     ],
     'org.pricing': ['pricing.update', 'pricing.read'],
     'org.inventory': ['inventory.adjust', 'inventory.read'],
-    'org.sales': ['orders.create', 'orders.update', 'orders.read'],
-    'org.fulfillment': ['orders.update', 'orders.read'],
+    'org.sales': [
+      'orders.create',
+      'orders.update',
+      'orders.read',
+      'checkout.reserve',
+      'checkout.release',
+      'checkout.commit',
+    ],
+    'org.fulfillment': [
+      'orders.update',
+      'orders.read',
+      'checkout.reserve',
+      'checkout.release',
+      'checkout.commit',
+    ],
     'org.accounting': ['orders.read', 'payout.read', 'report.financial.download'],
     'org.support': ['orders.read', 'catalog.sku.read'],
     'org.integrations': ['catalog.sku.read', 'inventory.read', 'orders.read'],
